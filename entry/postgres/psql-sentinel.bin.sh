@@ -67,7 +67,7 @@ function select_db() {
 
     if [ $EXIT_STATUS = 0 ]; then
         DB_NAME=$(echo "${CHOICE}" | awk '{print $1}')
-        log INFO DB: ${DB_NAME}
+        entry-log INFO DB: ${DB_NAME}
         if [ "${DB_NAME}" == "«PSQL_ARCHIVE_DIR»" ]; then
             mkdir -p "${PSQL_ARCHIVE_DIR}/remote"
             cd ${PSQL_ARCHIVE_DIR}/remote
@@ -80,7 +80,7 @@ function select_db() {
             select_action ${DB_NAME}
         fi
     else
-        log WARN DB: «CANCEL»
+        entry-log WARN DB: «CANCEL»
     fi
 }
 
@@ -99,12 +99,12 @@ function preview() {
 
 function query_lb_id(){
     local DB_NAME=$1
-    local LB_ID TABLE_EXISTS
+    local LB_ID="" TABLE_EXISTS
 
-    TABLE_EXISTS=$(psql -U ${PSQL_USER} -h ${PSQL_HOST} -d ${DB_NAME} -t -c "SELECT to_regclass('public.databasechangelog');")
+    TABLE_EXISTS=$(psql -U ${PSQL_USER} -h ${PSQL_HOST} -d "${DB_NAME}" -t -A -c "SELECT to_regclass('public.databasechangelog');" 2>/dev/null)
 
     if [ -n "${TABLE_EXISTS}" ]; then
-        LB_ID=$(psql -U ${PSQL_USER} -h ${PSQL_HOST} -d ${DB_NAME} -t -c "SELECT id FROM databasechangelog ORDER BY length(id) DESC, id DESC LIMIT 1;" 2>/dev/null)
+        LB_ID=$(psql -U ${PSQL_USER} -h ${PSQL_HOST} -d "${DB_NAME}" -t -A -c "SELECT id FROM databasechangelog ORDER BY orderexecuted DESC LIMIT 1;" 2>/dev/null)
     fi
     
     if [ -z "${LB_ID}" ]; then
@@ -146,9 +146,9 @@ function select_action() {
 
     if [ ${EXIT_STATUS} = 0 ]; then
         ACTION_NAME=$(echo "${CHOICE}" | awk '{print $1}')
-        log INFO ${IDENT} ACTION: ${ACTION_NAME}
+        entry-log INFO ${IDENT} ACTION: ${ACTION_NAME}
         if [ "${ACTION_NAME}" == "«EXIT»" ]; then
-            log ${IDENT} SUCCESS «EXIT»
+            entry-log ${IDENT} SUCCESS «EXIT»
             exit
         elif [ "${ACTION_NAME}" == ".." ]; then
             select_db
@@ -167,7 +167,7 @@ function select_action() {
             select_action ${DB_NAME}
         fi
     else
-        log ${IDENT} WARN ACTION: «CANCEL»
+        entry-log ${IDENT} WARN ACTION: «CANCEL»
     fi
 }
 
@@ -178,9 +178,11 @@ do_backup(){
 
     LB_ID=$(query_lb_id "${DB_NAME}")
     
-    printf -v LB_ID "%04d" "${LB_ID}"
+    if [[ "${LB_ID}" =~ ^[0-9]+$ ]]; then
+        printf -v LB_ID "%04d" "${LB_ID}"
+    fi
     BACKUP_FILE="${PSQL_ARCHIVE_DIR}/${DB_NAME}/${DB_NAME}-${LB_ID}-$(date +'%y%m%d-%H%M%S')-${TRIGGER}.dump"
-    log INFO BACKUP_FILE ${BACKUP_FILE}.tar.gz
+    entry-log INFO BACKUP_FILE ${BACKUP_FILE}.tar.gz
 
     mkdir -p "${PSQL_ARCHIVE_DIR}/${DB_NAME}"
     pg_dump -U ${PSQL_USER} -O -d ${DB_NAME} > ${BACKUP_FILE}.sql
@@ -192,7 +194,7 @@ do_backup(){
     rm "${BACKUP_FILE}.sql"
 
     BACKUP_SIZE=$(du -h ${BACKUP_FILE}.tar.gz | cut -f1)
-    log INFO BACKUP_SIZE: ${BACKUP_SIZE}
+    entry-log INFO BACKUP_SIZE: ${BACKUP_SIZE}
 }
 
 choice_backup() {
@@ -207,7 +209,7 @@ choice_backup() {
     FILES=($(find "${PSQL_ARCHIVE_DIR}" -type f | sort))
 
     if [ ${#FILES[@]} -eq 0 ]; then
-        log ERROR "No backup files found in ${PSQL_ARCHIVE_DIR}."
+        entry-log ERROR "No backup files found in ${PSQL_ARCHIVE_DIR}."
         exit 1
     fi
 
@@ -240,7 +242,7 @@ select_restore() {
     CHOICE=$(choice_backup "${DB_NAME}" "RESTORE")
 
     if [ -z "${CHOICE}" ]; then
-        log WARN RESTORE: «CANCEL»
+        entry-log WARN RESTORE: «CANCEL»
         exit 1
     fi
 
@@ -249,12 +251,12 @@ select_restore() {
     BACKUP_FILE=${PSQL_ARCHIVE_DIR}/${BACKUP_DIR}/${BACKUP_BASE}
 
     if [ "${BACKUP_DIR}" == ".." ]; then
-        log INFO RESTORE: ${BACKUP_DIR}
+        entry-log INFO RESTORE: ${BACKUP_DIR}
         select_action ${DB_NAME} ${LB_ID}
     else
-        log INFO RESTORE: ${BACKUP_FILE}
+        entry-log INFO RESTORE: ${BACKUP_FILE}
         do_backup ${DB_NAME} r
-        log WARN  ${BACKUP_FILE}
+        entry-log WARN  ${BACKUP_FILE}
         do_restore ${DB_NAME} ${BACKUP_FILE}
         select_action ${DB_NAME} ${LB_ID}
     fi
@@ -267,7 +269,7 @@ select_upload() {
     CHOICE=$(choice_backup "${DB_NAME}" "UPLOAD")
 
     if [ -z "${CHOICE}" ]; then
-        log WARN UPLOAD: «CANCEL»
+        entry-log WARN UPLOAD: «CANCEL»
         exit 1
     fi
 
@@ -276,10 +278,10 @@ select_upload() {
     BACKUP_FILE=${PSQL_ARCHIVE_DIR}/${BACKUP_DIR}/${BACKUP_BASE}
 
     if [ "${BACKUP_DIR}" == ".." ]; then
-        log INFO UPLOAD: ${BACKUP_DIR}
+        entry-log INFO UPLOAD: ${BACKUP_DIR}
         select_action ${DB_NAME} ${LB_ID}
     else
-        log INFO UPLOAD: ${BACKUP_FILE}
+        entry-log INFO UPLOAD: ${BACKUP_FILE}
         do_upload ${BACKUP_FILE}
         select_action ${DB_NAME} ${LB_ID}
     fi
@@ -298,28 +300,28 @@ do_restore(){
     
     if [ "${BACKUP_TAR_GZ}" = true ]; then
         TEMP_DIR=$(mktemp -d)
-        log ERROR ${TEMP_DIR}
+        entry-log ERROR ${TEMP_DIR}
         tar -xzf "${BACKUP_FILE}" -C "${TEMP_DIR}"
         BACKUP_FILE=$(find "${TEMP_DIR}" -name "*.sql" -type f)
     fi
 
-    log ERROR ${BACKUP_FILE}
+    entry-log ERROR ${BACKUP_FILE}
     
     if [ -n "${BACKUP_FILE}" ]; then
-        log DEBUG "Restoring from ${BACKUP_FILE}"
+        entry-log DEBUG "Restoring from ${BACKUP_FILE}"
         do_wipeout ${DB_NAME}
         sed -E "s/( OWNER TO) [^;]+;$/\1 \"${DB_NAME}\";/" ${BACKUP_FILE} | psql -U ${DB_NAME} -h ${PSQL_HOST} -d ${DB_NAME}
 
         if [ $? -eq 0 ]; then
-            log SUCCESS "Restore successful: ${DB_NAME}"
+            entry-log SUCCESS "Restore successful: ${DB_NAME}"
         else
-            log ERROR "Restore failed: ${DB_NAME}"
+            entry-log ERROR "Restore failed: ${DB_NAME}"
         fi
         if [ "${BACKUP_TAR_GZ}" = true ]; then
             rm -rf "${TEMP_DIR}"
         fi
     else
-        log WARN "No file selected."
+        entry-log WARN "No file selected."
     fi
 }
 
@@ -380,13 +382,13 @@ function psql_sentinel() {
         clear
     fi
 
-    log HEAD "psql-sentinel @ ${PSQL_ARCHIVE_DIR} & ${PSQL_CACHE_FILE}"
-    log INFO "[ ${AMS_NAME} | ${AMS_REVISION} | ${AMS_DEPLOY} | ${AMS_ENV} ]"
+    entry-log HEAD "psql-sentinel @ ${PSQL_ARCHIVE_DIR} & ${PSQL_CACHE_FILE}"
+    entry-log INFO "[ ${AMS_NAME} | ${AMS_REVISION} | ${AMS_DEPLOY} | ${AMS_ENV} ]"
 
     if [[ $# -ge 2 ]]; then
         local db_name=$1
         local backup_type=$2
-        log INFO "Parameters detected: database='${db_name}', backup_type='${backup_type}'"
+        entry-log INFO "Parameters detected: database='${db_name}', backup_type='${backup_type}'"
         do_backup "${db_name}" "${backup_type}"
     else
         select_db

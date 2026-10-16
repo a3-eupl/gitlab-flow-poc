@@ -2,63 +2,31 @@
 
 set -e
 
-log INFO "GLAB_LOG: '${GLAB_LOG}'. Options: [INSPECT, DEBUG]"
+source air-arg
 
-argument_config() {
-    __INSPECT=false
-    __DEBUG=false
-    __CRYPT=false
-
-    case "${GLAB_LOG}" in
-        inspect|INSPECT)
-            __INSPECT=true
-            __DEBUG=true
-            ;;
-        debug|DEBUG)
-            __DEBUG=true
-            ;;
-    esac
-
-    while [[ "$#" -gt 0 ]]; do
-        case $1 in
-            --inspect) __INSPECT=true ;;
-            --debug) __DEBUG=true ;;
-            --crypt) __CRYPT=true ;;
-            *) log ERROR "Unknown parameter: $1"; exit 64 ;;
-        esac
-        shift
-    done
-
-    if [ "$__INSPECT" = true ]; then
-        . setx INSPECT
-    fi
-
-    if [ "$__DEBUG" = true ]; then
-        source log level DEBUG
-    fi
-}
-
-kubeconfig_deploy() {
-    # assert ENV KUBECONFIG_HOME
-    log INFO "Deploying plain '.kubeconfig.yml' files to '${KUBECONFIG_HOME}"
+deploy_kube_config() {
+    LAYER_ROOT=.layer/@kube-config
     mkdir -p "${KUBECONFIG_HOME}"
     rm -rf "${KUBECONFIG_HOME:?}/"*
-    cp -r dist/* "${KUBECONFIG_HOME}/"
+
+    ansi-bar COPY "Copy config files to \"${KUBECONFIG_HOME}\""
+    air-copy DIR ${LAYER_ROOT} ${KUBECONFIG_HOME}
+    ansi-bar COPY COPY Done
+
     ansi-cmd tree ${KUBECONFIG_HOME}
-    #ls -laR "${KUBECONFIG_HOME}"
 }
 
-kubeconfig_deploy_crypt() {
+deploy_kube_config_crypt() {
     exit 1
 }
 
-ctx AHS_ORIGIN
-ctx AMS_ORIGIN
+ams-ctx AHS_ORIGIN
+ams-ctx AMS_ORIGIN
 
-argument_config "$@"
+air_arg "$@"
 
 if [ "$__CRYPT" = true ]; then
-    kubeconfig_deploy_crypt
+    deploy_kube_config_crypt
 else
-    kubeconfig_deploy
+    deploy_kube_config
 fi

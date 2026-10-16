@@ -2,13 +2,13 @@
 
 set -e
 
-log INFO "GLAB_LOG: '${GLAB_LOG}'. Options: [INSPECT, DEBUG]"
+air-log INFO "AIR_LOG: '${AIR_LOG}'. Options: [INSPECT, DEBUG]"
 
-argument_config() {
+arg_config() {
     __INSPECT=false
     __DEBUG=false
 
-    case "${GLAB_LOG}" in
+    case "${AIR_LOG}" in
         inspect|INSPECT)
             __INSPECT=true
             __DEBUG=true
@@ -22,7 +22,7 @@ argument_config() {
         case $1 in
             --inspect) __INSPECT=true ;;
             --debug) __DEBUG=true ;;
-            *) log ERROR "Unknown parameter: $1"; exit 64 ;;
+            *) air-log ERROR "Unknown parameter: $1"; exit 64 ;;
         esac
         shift
     done
@@ -32,7 +32,7 @@ argument_config() {
     fi
 
     if [ "$__DEBUG" = true ]; then
-        source log level DEBUG
+        source air-log level DEBUG
     fi
 }
 
@@ -107,9 +107,9 @@ env_files() {
     ORIGIN_ENV=origin.env
     AMS_ORIGIN_ENV=.env
 
-    log DEBUG "Exporting environment variables to ${ORIGIN_ENV}"
+    air-log DEBUG "Exporting environment variables to ${ORIGIN_ENV}"
     env | sort > ${ORIGIN_ENV}
-    if [ "${GLAB_LOG_LEVEL}" = "DEBUG" ]; then
+    if [ "${AIR_LOG_LEVEL}" = "DEBUG" ]; then
         cat ${ORIGIN_ENV}
     fi
 
@@ -117,7 +117,7 @@ env_files() {
         export AMS_REVISION="$CI_COMMIT_TAG"
     elif [ -d .git ]; then
         git config --global --add safe.directory ${PWD}
-        if [ "${GLAB_LOG_LEVEL}" = "DEBUG" ]; then
+        if [ "${AIR_LOG_LEVEL}" = "DEBUG" ]; then
             git fetch --unshallow || git fetch
         else
             git fetch --unshallow > /dev/null 2>&1 || git fetch > /dev/null 2>&1
@@ -137,32 +137,32 @@ env_files() {
     export AMS_REGISTRY=${CI_REGISTRY_IMAGE}
 
     if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" ]]; then
-        assert ENV AMS_ROLLOUT @/0.0.0/default
+        air-assert ENV AMS_ROLLOUT @/0.0.0/default
         #export AMS_ROLLOUT="${AMS_ROLLOUT}"
     else
         export AMS_ROLLOUT=${CI_COMMIT_BRANCH}
     fi
 
-    #assert ENV ROLLOUT_HOME
+    # air-assert ENV ROLLOUT_HOME
 
     SHA_ROLLOUT=${ROLLOUT_HOME}/${CI_PROJECT_PATH}/${CI_COMMIT_SHA}
 
     if [ -z "${AMS_ROLLOUT}" ]; then
         if [ -f "${SHA_ROLLOUT}" ]; then
             AMS_ROLLOUT=$(cat "${SHA_ROLLOUT}")
-            log INFO "The rollout environment variable AMS_ROLLOUT has been updated with the value: \"${AMS_ROLLOUT}\" from the file: \"${SHA_ROLLOUT}\""
+            air-log INFO "The rollout environment variable AMS_ROLLOUT has been updated with the value: \"${AMS_ROLLOUT}\" from the file: \"${SHA_ROLLOUT}\""
         else
-            log ERROR "The rollout file \"${SHA_ROLLOUT}\" was not found"
-            log ERROR "Check COMMIT_PIPELINES: ${CI_PROJECT_URL}/-/commit/${CI_COMMIT_SHA}/pipelines"
+            air-log ERROR "The rollout file \"${SHA_ROLLOUT}\" was not found"
+            air-log ERROR "Check COMMIT_PIPELINES: ${CI_PROJECT_URL}/-/commit/${CI_COMMIT_SHA}/pipelines"
             exit 1
         fi
     else
         mkdir -p "$(dirname "${SHA_ROLLOUT}")"
         ROLLOUT_REMOVED_FILES_COUNT=$(find "$(dirname "$SHA_ROLLOUT")" -type f -mtime +7 -exec rm -f {} \; -print | wc -l)
-        log INFO "Old rollout files older than 7 days have been removed. Total removed files: ${ROLLOUT_REMOVED_FILES_COUNT}"
+        air-log INFO "Old rollout files older than 7 days have been removed. Total removed files: ${ROLLOUT_REMOVED_FILES_COUNT}"
 
         echo "$AMS_ROLLOUT" > "${SHA_ROLLOUT}"
-        log INFO "The rollout file \"${SHA_ROLLOUT}\" has been created with the value: \"${AMS_ROLLOUT}\""
+        air-log INFO "The rollout file \"${SHA_ROLLOUT}\" has been created with the value: \"${AMS_ROLLOUT}\""
     fi
 
     ams_rollout
@@ -184,36 +184,51 @@ AMS_PROJECT=${AMS_PROJECT}
 AMS_REGISTRY=${AMS_REGISTRY}
 EOF
 
-    log DEBUG "Contents of the '${AMS_ORIGIN_ENV}' file:"
-    log DEBUG "$(cat ./${AMS_ORIGIN_ENV})"
+    air-log DEBUG "Contents of the '${AMS_ORIGIN_ENV}' file:"
+    air-log DEBUG "$(cat ./${AMS_ORIGIN_ENV})"
 
-    log DEBUG "Contents of the '${ORIGIN_ENV}' file:"
-    log DEBUG "$(cat ./${ORIGIN_ENV})"
+    air-log DEBUG "Contents of the '${ORIGIN_ENV}' file:"
+    air-log DEBUG "$(cat ./${ORIGIN_ENV})"
 
-    log INFO "Environment files ['${ORIGIN_ENV}', '${AMS_ORIGIN_ENV}'] have been created"
+    air-log INFO "Environment files ['${ORIGIN_ENV}', '${AMS_ORIGIN_ENV}'] have been created"
 }
 
 store_ci() {
-    log INFO "Storing CI ..."
+    air-log INFO "Storing CI ..."
     if [ -n "$CI_COMMIT_BRANCH" ] && [ "${CI_COMMIT_REF_PROTECTED}" == "true" ]; then
-        # assert ENV CI_HOME
+        # air-assert ENV CI_HOME
         CI_FILE_PATH="${CI_HOME}/${CI_PROJECT_PATH}/${CI_COMMIT_BRANCH}/.gitlab-ci.yml"
         mkdir -p "$(dirname "$CI_FILE_PATH")"
         cat .gitlab-ci.yml > "$CI_FILE_PATH"
-        log INFO "CI file [$CI_FILE_PATH] has been created"
+        air-log INFO "CI file [$CI_FILE_PATH] has been created"
     else
         if [ -z "$CI_COMMIT_BRANCH" ]; then
-            log WARN "CI_COMMIT_BRANCH is not defined. CI file was not created."
+            air-log WARN "CI_COMMIT_BRANCH is not defined. CI file was not created."
         elif [ "${CI_COMMIT_REF_PROTECTED}" != "true" ]; then
-            log WARN "CI_COMMIT_REF_PROTECTED is not 'true'. CI file was not created."
+            air-log WARN "CI_COMMIT_REF_PROTECTED is not 'true'. CI file was not created."
         fi
     fi
 }
 
-ctx AHS_ORIGIN
+pipeline_name() {
+    if [ -n "$GL_API_TOKEN" ]; then
+      air-log INFO "GL_API_TOKEN is set. Updating the pipeline name..."
+      PIPELINE_NAME="🛡️ ${AMS_PARTITION}-${AMS_SEGMENT} 💎 ${AMS_REVISION}"
+      curl --request PUT \
+        --header "PRIVATE-TOKEN: $GL_API_TOKEN" \
+        --header "Content-Type: application/json" \
+        --data "{\"name\":\"$PIPELINE_NAME\"}" \
+        "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/metadata"
+    else
+      air-log WARN "GL_API_TOKEN is not set. Skipping the pipeline name update."
+    fi
+}
 
-argument_config "$@"
+ams-ctx AHS_ORIGIN
+
+arg_config "$@"
 env_files
 store_ci
+pipeline_name
 
-ctx AMS_ORIGIN
+ams-ctx AMS_ORIGIN

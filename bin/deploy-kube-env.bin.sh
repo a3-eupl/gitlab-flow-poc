@@ -2,14 +2,14 @@
 
 set -e
 
-log INFO "GLAB_LOG: '${GLAB_LOG}'. Options: [INSPECT, DEBUG]"
+air-log INFO "AIR_LOG: '${AIR_LOG}'. Options: [INSPECT, DEBUG]"
 
-argument_config() {
+arg_config() {
     __INSPECT=false
     __DEBUG=false
     __CRYPT=false
 
-    case "${GLAB_LOG}" in
+    case "${AIR_LOG}" in
         inspect|INSPECT)
             __INSPECT=true
             __DEBUG=true
@@ -24,7 +24,7 @@ argument_config() {
             --inspect) __INSPECT=true ;;
             --debug) __DEBUG=true ;;
             --crypt) __CRYPT=true ;;
-            *) log ERROR "Unknown parameter: $1"; exit 64 ;;
+            *) air-log ERROR "Unknown parameter: $1"; exit 64 ;;
         esac
         shift
     done
@@ -34,23 +34,24 @@ argument_config() {
     fi
 
     if [ "$__DEBUG" = true ]; then
-        source log level DEBUG
+        source air-log level DEBUG
     fi
 }
 
-env_deploy() {
-    # assert ENV ENV_HOME
-    log INFO "Deploying plain .env files to '${ENV_HOME}'"
+deploy_kube_env() {
+    # air-assert ENV ENV_HOME
+    air-log INFO "Deploying plain .env files to '${ENV_HOME}'"
     mkdir -p "${ENV_HOME}"
     rm -rf "${ENV_HOME:?}/"*
-    cp -r .opt/* "${ENV_HOME}/"
+    #cp -r .opt/* "${ENV_HOME}/"
+    air-copy DIR .opt ${ENV_HOME}
     ansi-cmd tree ${ENV_HOME}
     #ls -laR "${ENV_HOME}"
 }
 
-env_deploy_crypt() {
-    log INFO "Encrypting .env files to session-request directory..."
-    assert ENV PDS_TOKEN
+deploy_kube_env_crypt() {
+    air-log INFO "Encrypting .env files to session-request directory..."
+    air-assert ENV PDS_TOKEN
     find .opt/ -type f -name '*.env' | while read -r FILE_PATH; do 
         FILE_NAME=$(basename "${FILE_PATH}")
         FILE_BASE="${FILE_NAME%.*}"
@@ -63,13 +64,13 @@ env_deploy_crypt() {
     done
 }
 
-ctx AHS_ORIGIN
-ctx AMS_ORIGIN
+ams-ctx AHS_ORIGIN
+ams-ctx AMS_ORIGIN
 
-argument_config "$@"
+arg_config "$@"
 
 if [ "$__CRYPT" = true ]; then
-    env_deploy_crypt
+    deploy_kube_env_crypt
 else
-    env_deploy
+    deploy_kube_env
 fi

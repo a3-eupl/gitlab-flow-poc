@@ -1,9 +1,16 @@
 #!/bin/bash
-# Easy Java Manager (Updated to match ENM dynamic versions)
+# Easy Manager Java
 
 set -e
 
-EJM_DIR="/opt/ejm_versions"
+PACKAGE="java"
+PACKAGE_VERSION_HINT="25.0.3+9"
+PACKAGE_NAME="${PACKAGE^}"
+
+MANAGER=$(basename "$0")
+MANAGER_DIR=${BIN_HOME}/${MANAGER}
+MANAGER_BIN=bin/java
+
 CURRENT_JAVA_LINK="/usr/lib/jvm/current"
 DEFAULT_JAVA_LINK="/usr/lib/jvm/default-jvm"
 
@@ -36,89 +43,88 @@ format_version() {
   echo -e "${prefix}${name} (${size})${suffix}"
 }
 
-install_java() {
+install_version() {
   local version=$1
-  local url=""
+  local url="https://api.adoptium.net/v3/binary/version/jdk-${version}/alpine-linux/x64/jdk/hotspot/normal/eclipse"
+  local archive="/tmp/java-${version}.tar.gz"
 
-  if [ -z "$version" ]; then
-    log ERROR "Java version is required (e.g., 25, 21, or full tag like 25.0.3+9)."
-    exit 1
+  if [ -z "${version}" ]; then
+    air-log ERROR "${PACKAGE_NAME} version is required (${PACKAGE_VERSION_HINT})."
+    exit 11
   fi
 
-  mkdir -p "${EJM_DIR}"
-  cd "${EJM_DIR}" || exit 1
+  mkdir -p "${MANAGER_DIR}"
+  cd "${MANAGER_DIR}" || exit 12
 
   if [ -d "${version}" ]; then
-    log WARN "Java ${version} is already installed."
-    return
+    air-log ERROR "${PACKAGE_NAME} '${version}' is already installed in '${MANAGER_DIR}'."
+    exit 13
   fi
-
-  url="https://api.adoptium.net/v3/binary/version/jdk-$version/alpine-linux/x64/jdk/hotspot/normal/eclipse"
   
-  log INFO "Downloading Java ${version} from source '${url}'."
-
-  local archive="/tmp/java-${version}.tar.gz"
+  air-log INFO "Downloading ${PACKAGE_NAME} '${version}' from source '${url}' to '${archive}' ..."
   
   # Pridané -f pre potlačenie HTTP chýb a -L pre správne presmerovanie (redirect)
   if ! curl -f -L -o "${archive}" "${url}"; then
-    log ERROR "Failed to download Java ${version}. Check if the version is valid."
-    exit 1
+    air-log ERROR "Failed to download ${PACKAGE_NAME} '${version}'. Check if the version is valid."
+    search_versions ${version}
+    exit 14
   fi
 
-  log INFO "Extracting Java ${version}..."
+  air-log INFO "Extracting ${PACKAGE_NAME} '${version}' from '${archive}' to '${MANAGER_DIR}/${version}' ..."
   mkdir -p "${version}"
-  tar -xzf "${archive}" --strip-components=1 -C "${version}"
+  tar -xf "${archive}" --strip-components=1 -C "${version}"
   rm -f "${archive}"
 
-  if [ ! -x "${version}/bin/java" ]; then
-    log ERROR "Java binary not found: ${EJM_DIR}/${version}/bin/java"
+  if [ ! -x "${version}/${MANAGER_BIN}" ]; then
+    air-log ERROR "${PACKAGE_NAME} binary not found: ${MANAGER_DIR}/${version}/${MANAGER_BIN}"
     rm -rf "${version}"
-    exit 1
+    exit 15
   fi
 
-  log INFO "Java ${version} installed."
-  use_java "${version}"
+  air-log INFO "${PACKAGE_NAME} '${version}' installed successfully in '${MANAGER_DIR}/${version}'."
+  use_version "${version}"
 }
 
-use_java() {
-  local java_version=$1
-  local JAVA_DIR="${EJM_DIR}/${java_version}"
+use_version() {
+  local version=$1
+  local MANAGER_VER_DIR="${MANAGER_DIR}/${version}"
 
-  if [ -z "$java_version" ]; then
-    log ERROR "Java version is required."
-    exit 1
+  if [ -z "${version}" ]; then
+    air-log ERROR "${PACKAGE_NAME} version is required (25.0.3+9)."
+    exit 21
   fi
 
-  if [ ! -d "${JAVA_DIR}" ]; then
-    log ERROR "Java version $java_version is not installed."
-    exit 1
-  fi
-
-  if [ ! -x "${JAVA_DIR}/bin/java" ]; then
-    log ERROR "Java binary not found in ${JAVA_DIR}/bin/java"
-    exit 1
+  if [ ! -d "${MANAGER_VER_DIR}" ]; then
+    air-log WARN "${PACKAGE_NAME} version '${version}' is not installed."
+    list_versions
+    air-log INFO "Try to install: '${version}'"
+    install_version "${version}"
+    list_versions
+    exit 22
   fi
 
   mkdir -p "$(dirname "${CURRENT_JAVA_LINK}")"
 
   # Prelinkovanie hlavných adresárov prostredia
-  ln -sfn "${JAVA_DIR}" "${CURRENT_JAVA_LINK}"
-  ln -sfn "${JAVA_DIR}" "${DEFAULT_JAVA_LINK}"
+  ln -sfn "${MANAGER_VER_DIR}" "${CURRENT_JAVA_LINK}"
+  ln -sfn "${MANAGER_VER_DIR}" "${DEFAULT_JAVA_LINK}"
+
+  em-ln ${MANAGER_DIR} ${version}/bin
 
   # Výmena symlinkov v /usr/bin pre globálnu dostupnosť
-  ln -sfn "${CURRENT_JAVA_LINK}/bin/java" /usr/bin/java
+  #ln -sfn "${CURRENT_JAVA_LINK}/bin/java" /usr/bin/java
 
-  if [ -x "${CURRENT_JAVA_LINK}/bin/javac" ]; then
-    ln -sfn "${CURRENT_JAVA_LINK}/bin/javac" /usr/bin/javac
-  fi
+#  if [ -x "${CURRENT_JAVA_LINK}/bin/javac" ]; then
+#    ln -sfn "${CURRENT_JAVA_LINK}/bin/javac" /usr/bin/javac
+#  fi
 
-  if [ -x "${CURRENT_JAVA_LINK}/bin/jar" ]; then
-    ln -sfn "${CURRENT_JAVA_LINK}/bin/jar" /usr/bin/jar
-  fi
+#  if [ -x "${CURRENT_JAVA_LINK}/bin/jar" ]; then
+#    ln -sfn "${CURRENT_JAVA_LINK}/bin/jar" /usr/bin/jar
+#  fi
 
   hash -r 2>/dev/null || true
 
-  log INFO "Switched to Java ${java_version}"
+  air-log INFO "Successfully switched to ${PACKAGE_NAME} '${version}'."
   java -version 2>&1 | head -n 1
 }
 
@@ -130,14 +136,16 @@ list_versions() {
   local active_version=""
   local total_bytes=0
 
+  air-log INFO "Installed ${PACKAGE_NAME} versions:"
+
   if [ -L "${CURRENT_JAVA_LINK}" ]; then
     local java_link
     java_link=$(readlink "${CURRENT_JAVA_LINK}")
     active_version=$(basename "$java_link")
   fi
 
-  if [ -d "${EJM_DIR}" ]; then
-    for version_dir in "${EJM_DIR}"/*; do
+  if [ -d "${MANAGER_DIR}" ]; then
+    for version_dir in "${MANAGER_DIR}"/*; do
       [ -d "$version_dir" ] || continue
 
       local version size_bytes size_hr state
@@ -150,15 +158,14 @@ list_versions() {
       size_hr=$(numfmt --to=iec --suffix=B "$size_bytes" 2>/dev/null)
 
       state="installed"
-      [ "$version" = "$active_version" ] && state="active"
+      [ "${version}" = "$active_version" ] && state="active"
 
-      format_version "$version" "$size_hr" "$state"
+      format_version "${version}" "$size_hr" "$state"
     done
 
     local total_hr
     total_hr=$(numfmt --to=iec --suffix=B "$total_bytes" 2>/dev/null)
 
-    echo ""
     echo -e "${ANSI_GREEN}Total installed size:${ANSI_RESET} ${total_hr}"
   fi
 }
@@ -201,30 +208,34 @@ load_java_versions() {
 }
 
 search_versions() {
-  local search_term=$1
+  local term=$1
 
   if ! command -v jq >/dev/null 2>&1; then
-    log ERROR "This command requires jq."
+    air-log ERROR "This command requires jq."
     exit 1
   fi
 
-  log INFO "Fetching available Java versions from Adoptium..."
+  if [ -n "${term}" ]; then
+      air-log INFO "Fetching online ${PACKAGE_NAME} versions matching '${term}'..."
+  else
+      air-log INFO "Fetching online ${PACKAGE_NAME} versions..."
+  fi
 
   local raw_versions
   raw_versions=$(load_java_versions)
 
   if [ $? -ne 0 ] || [ -z "$raw_versions" ]; then
-    log ERROR "Failed to fetch versions from Adoptium."
+    air-log ERROR "Failed to fetch versions from Adoptium."
     exit 1
   fi
 
   local filtered_versions
 
-  if [ -n "$search_term" ]; then
-    filtered_versions=$(echo "$raw_versions" | grep "^${search_term}" || true)
+  if [ -n "${term}" ]; then
+    filtered_versions=$(echo "$raw_versions" | grep "^${term}" || true)
 
     if [ -z "$filtered_versions" ]; then
-      log WARN "No online versions match '${search_term}'."
+      air-log WARN "No ${PACKAGE_NAME} versions found for '${term}'"
       return
     fi
   else
@@ -240,18 +251,18 @@ search_versions() {
   # 👉 installed map
   declare -A installed_versions
 
-  if [ -d "${EJM_DIR}" ]; then
-    for dir in "${EJM_DIR}"/*; do
+  if [ -d "${MANAGER_DIR}" ]; then
+    for dir in "${MANAGER_DIR}"/*; do
       [ -d "$dir" ] || continue
       installed_versions["$(basename "$dir")"]="$(readlink -f "$dir")"
     done
   fi
 
   echo "$filtered_versions" | sort -rV | while IFS= read -r version; do
-    [ -n "$version" ] || continue
+    [ -n "${version}" ] || continue
 
     local normalized
-    normalized=$(normalize_java_version "$version")
+    normalized=$(normalize_java_version "${version}")
 
     local state="remote"
     local size="-"
@@ -266,19 +277,19 @@ search_versions() {
       fi
 
       # size len pre installed
-      size=$(du -sh "${EJM_DIR}/${normalized}" 2>/dev/null | awk '{print $1}')
+      size=$(du -sh "${MANAGER_DIR}/${normalized}" 2>/dev/null | awk '{print $1}')
     fi
 
-    format_version "$version" "$size" "$state"
+    format_version "${version}" "$size" "$state"
   done
 }
 
 case "$1" in
   install)
-    install_java "$2"
+    install_version "$2"
     ;;
   use)
-    use_java "$2"
+    use_version "$2"
     ;;
   list)
     list_versions
@@ -287,8 +298,8 @@ case "$1" in
     search_versions "$2"
     ;;
   *)
-    log USAGE "Easy Java Manager"
-    log USAGE "Usage: $0 {install|use|list|search} [version]"
+    air-log USAGE "Easy Manager ${PACKAGE_NAME}"
+    air-log USAGE "Usage: ${MANAGER} {install|use|list|search} [version]"
     exit 1
     ;;
 esac

@@ -1,24 +1,35 @@
 #!/bin/sh
 
+_log() {
+    if command -v air-log >/dev/null 2>&1; then
+        command air-log "$@"
+    else
+        level="$1"
+        shift
+        echo "[$level] $*"
+    fi
+}
+
+ansi-bar BIN "Installing Binaries"
 
 if [ -n "$1" ]; then
-  SRC="/bin/$1.bin.sh"
+  SRC="./bin/$1.bin.sh"
   DST=".bin/$1.bin.sh"
 
   if [ ! -f "$SRC" ]; then
-    log ERROR "Source file not found: $SRC"
+    air-log ERROR "Source file not found: $SRC"
     exit 1
   fi
 
   if [ -e "$DST" ]; then
-    log ERROR "File already exists: $DST"
+    air-log ERROR "File already exists: $DST"
     exit 2
   fi
 
   mkdir -p .bin
-  cp "$SRC" "$DST"
+  air-copy FILE "$SRC" "$DST"
 
-  log success "Copied: $SRC -> $DST"
+  air-log success "Copied: $SRC -> $DST"
   exit 0
 fi
 
@@ -39,11 +50,19 @@ for script in .*.bin.sh *.bin.sh; do
   base_name=$(basename "$script" .bin.sh)
   target_path="/usr/local/bin/$base_name"
   
-  ln -sf "$(pwd)/$script" "$target_path"
-  
-  log success "Installed: Symbolic link created: $target_path -> $(pwd)/$script"
+  if error=$(ln -sf "$(pwd)/$script" "$target_path" 2>&1); then
+      _log SUCCESS "Installed: Symbolic link created: $target_path -> $(pwd)/$script"
+  else
+      _log ERROR "Failed to create symbolic link: $target_path ($error)"
+  fi
 done
 
 if [ "$DIR_CHANGED" = "true" ]; then
   cd "$OLD_DIR"
 fi
+
+if [ -d ".git" ]; then
+  cd .git
+fi
+
+ansi-bar BIN BIN " "

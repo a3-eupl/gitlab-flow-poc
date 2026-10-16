@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# ansi-lint-env
+# ansi-env-usage
 #
 # This script scans a file for environment variable placeholders (e.g. $VAR or ${VAR}),
 # checks if these variables are set in the current environment,
@@ -11,13 +11,13 @@
 # If any variable is missing, the script exits with status 1.
 #
 # Usage:
-#   ansi-lint-env [file]
+#   ansi-env-usage [file]
 # If no file is specified, a default file path is used.
 #
 # Example:
-#   ansi-lint-env myconfig.yml
+#   ansi-env-usage myconfig.yml
 
-ansi_lint_env() {
+ansi_env_usage() {
   local FILE="${1}"
   local HIDE_VALUES="${2:-false}"
   local left_text="$FILE"
@@ -27,7 +27,7 @@ ansi_lint_env() {
   fi
 
   if [ ! -f "$FILE" ]; then
-    log ERROR "File '$FILE' does not exist."
+    air-log ERROR "File '$FILE' does not exist."
     exit 1
   fi
 
@@ -78,12 +78,12 @@ ansi_lint_env() {
   local var_count=$(echo "$VARS" | wc -l)
   local right_text="vars: $var_count | missing: $MISSING_COUNT"
 
-  ansi-bar LINT-ENV "${left_text}" "${right_text}"
+  ansi-bar ENV-USAGE "${left_text}" "${right_text}"
 
   if [ "$MISSING_COUNT" -gt 0 ]; then
-    log ERROR "At least one required environment variable is missing."
+    air-log ERROR "At least one required environment variable is missing."
     exit 1
   fi
 }
 
-ansi_lint_env $1 $2
+ansi_env_usage $1 $2

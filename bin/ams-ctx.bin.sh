@@ -61,6 +61,7 @@ ams_image_ctx() {
     _context 100 20 AMS-IMAGE-CTX
     _ctx AMS_IMAGE_REGISTRY ${AMS_IMAGE_REGISTRY}
     _ctx AMS_IMAGE_LAYERS ${AMS_IMAGE_LAYERS}
+    _ctx AMS_LAYER_SIZE ${AMS_LAYER_SIZE}
     _ctx AMS_IMAGE_SIZE ${AMS_IMAGE_SIZE}
     _ctx
 }
@@ -78,8 +79,18 @@ ams_ping_ctx() {
 
 env_ctx(){
     _context 80 20 ENV-CTX
-    _ctx ENV_REVISION ${ENV_REVISION}
-    _ctx ENV_BUILD ${ENV_BUILD}
+    _ctx _AHS_REVISION ${_AHS_REVISION}
+    _ctx _AHS_BUILD ${_AHS_BUILD}
+    _ctx _ENV_REVISION ${_ENV_REVISION}
+    _ctx _ENV_BUILD ${_ENV_BUILD}
+    _ctx _ENV_TEMPLATE ${_ENV_TEMPLATE}
+    _ctx
+}
+
+kube_ctx(){
+    _context 118 20 KUBE-CTX
+    _ctx KUBE_NODE ${KUBE_NODE}
+    _ctx KUBE_SPACE ${KUBE_SPACE}
     _ctx
 }
 
@@ -108,7 +119,7 @@ _ctx() {
 }
 
 if [[ $# -eq 0 ]]; then
-    log USAGE "$0 {AHS_ORIGIN|AMS_ORIGIN|AMS_IMAGE|AMS_DEPLOY|AMS_PING}"
+    air-log USAGE "$0 {AHS_ORIGIN|AMS_ORIGIN|AMS_IMAGE|AMS_DEPLOY|AMS_PING}"
     exit 64
 fi
 
@@ -134,9 +145,12 @@ case "$1" in
     ENV)
         env_ctx
         ;;
+    KUBE)
+        kube_ctx
+        ;;
     *)
-        log ERROR "Invalid option: $1"
-        log USAGE "$0 {AHS_ORIGIN|AMS_ORIGIN|AMS_IMAGE|AMS_DEPLOY|AMS_PING}"
+        air-log ERROR "Invalid option: $1"
+        air-log USAGE "$0 {AHS_ORIGIN|AMS_ORIGIN|AMS_IMAGE|AMS_DEPLOY|AMS_PING}"
         exit 2
         ;;
 esac

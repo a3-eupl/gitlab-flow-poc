@@ -1,7 +1,7 @@
 #!/bin/bash
-mkdir -p opt/dist/pds
+mkdir -p .opt/dist
 
-PDS_INSTALL=opt/dist/pds/install-pds.sh
+PDS_INSTALL=.opt/dist/install-pds.sh
 
 _br() {
   {

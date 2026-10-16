@@ -29,7 +29,7 @@ _req() {
 }
 
 if [[ $# -eq 0 ]]; then
-    log USAGE "$0 PARAM1 PARAM2 ..."
+    air-log USAGE "$0 PARAM1 PARAM2 ..."
     exit 64
 fi
 

@@ -2,7 +2,7 @@
 DATABASE="$1"
 USER="${DATABASE}"
 
-log DEBUG Creating database if not exists: ${DATABASE}
+entry-log DEBUG Creating database if not exists: ${DATABASE}
 if [[ "$(psql -U "$POSTGRES_USER" -A -tc "SELECT 1 FROM pg_database WHERE datname = '${DATABASE}'")" == "1" ]]; then
 	echo "Database ${DATABASE} already exists!"
 else

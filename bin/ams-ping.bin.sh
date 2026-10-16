@@ -14,7 +14,7 @@ ping_loop() {
   local SLEEP_TIME=5
 
   for ((i=1; i<=${RETRIES}; i++)); do
-    log INFO "Check ${i}/${RETRIES}: [sleep 5 sec...] -> ${AMS_ENDPOINT}"
+    air-log INFO "Check ${i}/${RETRIES}: [sleep 5 sec...] -> ${AMS_ENDPOINT}"
     sleep "${SLEEP_TIME}"
 
     if check_deployment; then
@@ -22,7 +22,7 @@ ping_loop() {
     fi
 
     if [ "${i}" -eq "${RETRIES}" ]; then
-      log ERROR "Deployment failed."
+      air-log ERROR "Deployment failed."
       exit 1
     fi
   done
@@ -65,19 +65,19 @@ check_deployment() {
   fi
 
   if [[ "${HTTP_CODE}" -ne 200 ]]; then
-    log WARN "Received HTTP response code ${HTTP_CODE} - ${BODY}"
+    air-log WARN "Received HTTP response code ${HTTP_CODE} - ${BODY}"
     return 1
   fi
 
-  RESPONSE_NAME=$(echo "${BODY}"          | grep -o '<text id="name"[^>]*>[^<]*'      | sed 's/.*>\([^<]*\).*/\1/')
-  RESPONSE_DEPLOY=$(echo "${BODY}"        | grep -o '<text id="deploy"[^>]*>[^<]*'    | sed 's/.*>\([^<]*\).*/\1/')
-  RESPONSE_SPACE=$(echo "${BODY}"           | grep -o '<text id="space"[^>]*>[^<]*'       | sed 's/.*>\([^<]*\).*/\1/')
-  RESPONSE_REVISION=$(echo "${BODY}"      | grep -o '<text id="revision"[^>]*>[^<]*'  | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_NAME=$(     echo "${BODY}"    | grep -o '<text id="name"[^>]*>[^<]*'      | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_DEPLOY=$(   echo "${BODY}"    | grep -o '<text id="deploy"[^>]*>[^<]*'    | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_SPACE=$(    echo "${BODY}"    | grep -o '<text id="space"[^>]*>[^<]*'     | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_REVISION=$( echo "${BODY}"    | grep -o '<text id="revision"[^>]*>[^<]*'  | sed 's/.*>\([^<]*\).*/\1/')
 
-  #RESPONSE_HUB_REVISION=$(echo "${BODY}"  | grep -o '<text id="hub"[^>]*>[^<]*'       | sed 's/.*>\([^<]*\).*/\1/')
-  RESPONSE_BUILD=$(echo "${BODY}"         | grep -o '<text id="build"[^>]*>[^<]*'     | sed 's/.*>\([^<]*\).*/\1/')
-  RESPONSE_RELEASE=$(echo "${BODY}"       | grep -o '<text id="release"[^>]*>[^<]*'   | sed 's/.*>\([^<]*\).*/\1/')
-  RESPONSE_RUN=$(echo "${BODY}"           | grep -o '<text id="run"[^>]*>[^<]*'       | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_HUB=$(      echo "${BODY}"    | grep -o '<text id="hub"[^>]*>[^<]*'       | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_BUILD=$(    echo "${BODY}"    | grep -o '<text id="build"[^>]*>[^<]*'     | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_RELEASE=$(  echo "${BODY}"    | grep -o '<text id="release"[^>]*>[^<]*'   | sed 's/.*>\([^<]*\).*/\1/')
+  RESPONSE_RUN=$(      echo "${BODY}"    | grep -o '<text id="run"[^>]*>[^<]*'       | sed 's/.*>\([^<]*\).*/\1/')
 
   echo "+-------------------+---------local----------+--------response--------+----------+"
   compare_values "AMS_NAME"         "${AMS_NAME}"         "${RESPONSE_NAME}"
@@ -86,7 +86,7 @@ check_deployment() {
   compare_values "AMS_RELEASE"      "${AMS_RELEASE}"      "${RESPONSE_RELEASE}"
   compare_values "AMS_SPACE"        "${AMS_SPACE}"        "${RESPONSE_SPACE}"
   echo "+-------------------+------------------------+------------------------+----------+"
-  #compare_values "AHS_HUB_REVISION" "${AMS_HUB_REVISION}" "${RESPONSE_HUB_REVISION}"
+  compare_values "AHS_HUB"          "${AHS_REVISION}"     "${RESPONSE_HUB}"
   compare_values "AMS_BUILD"        "${AMS_BUILD}"        "${RESPONSE_BUILD}"
   compare_values "AMS_RUN"          "${AMS_RUN}"          "${RESPONSE_RUN}"
   echo "+-------------------+------------------------+------------------------+----------+"
@@ -95,12 +95,12 @@ check_deployment() {
         "${RESPONSE_NAME}" == "${AMS_NAME}" && \
 #        "${RESPONSE_DEPLOY}" == "${AMS_DEPLOY}" && \
         "${RESPONSE_SPACE}" == "${AMS_SPACE}" ]]; then
-    log SUCCESS "Deployment successful."
+    air-log SUCCESS "Deployment successful."
     exit 0
   else
     return 1
   fi
 }
 
-ctx AMS_PING
+ams-ctx AMS_PING
 ping_loop

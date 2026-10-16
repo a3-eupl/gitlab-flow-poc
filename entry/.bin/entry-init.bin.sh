@@ -2,7 +2,7 @@
 
 SERVICE_NAME="$1"
 
-ENTRY_INIT_DIR=/opt/init/${AMS_SPACE}
+ENTRY_INIT_DIR=/opt/${AMS_NAME}.air/init/${AMS_SPACE}
 ENTRY_INIT_LIMIT=30
 SLEEP_INTERVAL=5
 
@@ -33,30 +33,30 @@ check_service_ready() {
 }
 
 _main() {
-    log HEAD "$0"
+    entry-log HEAD "$0"
 
     if [ -z "${AMS_SPACE}" ]; then
-        log ERROR "Environment variable AMS_SPACE is not set."
+        entry-log ERROR "Environment variable AMS_SPACE is not set."
         exit 1
     fi
 
     ENTRY_INIT_COUNT=0
 
-    log INFO "Waiting for ${SERVICE_NAME}, limit: ${ENTRY_INIT_LIMIT} (interval: ${SLEEP_INTERVAL}s)"
+    entry-log INFO "Waiting for ${SERVICE_NAME}, limit: ${ENTRY_INIT_LIMIT} (interval: ${SLEEP_INTERVAL}s)"
     
     while ! check_service_ready; do
         (( ENTRY_INIT_COUNT ++ ))
 
         if (( ENTRY_INIT_COUNT >= ENTRY_INIT_LIMIT )); then
-          log ERROR "${SERVICE_NAME} is not ready after ${ENTRY_INIT_LIMIT} attempts"
+          entry-log ERROR "${SERVICE_NAME} is not ready after ${ENTRY_INIT_LIMIT} attempts"
           exit 1
         fi
 
-        log WARN "${ENTRY_INIT_COUNT}/${ENTRY_INIT_LIMIT}: ${SERVICE_NAME} is not ready yet. Waiting for ${SLEEP_INTERVAL} seconds before retrying."
+        entry-log WARN "${ENTRY_INIT_COUNT}/${ENTRY_INIT_LIMIT}: ${SERVICE_NAME} is not ready yet. Waiting for ${SLEEP_INTERVAL} seconds before retrying."
         sleep "${SLEEP_INTERVAL}"
     done
 
-    log INFO "${SERVICE_NAME} became ready (after ${ENTRY_INIT_COUNT} attempts)"
+    entry-log INFO "${SERVICE_NAME} became ready (after ${ENTRY_INIT_COUNT} attempts)"
 
     if [ -d "${ENTRY_INIT_DIR}" ]; then
         pushd "${ENTRY_INIT_DIR}" > /dev/null
@@ -68,17 +68,17 @@ _main() {
         for ENTRY_INIT_FILE in "${ENTRY_INIT_FILES[@]}"; do
             (( ENTRY_INIT_COUNT++ ))
 
-            log INFO "Executing script [${ENTRY_INIT_COUNT}/${ENTRY_INIT_TOTAL}]: ${ENTRY_INIT_FILE}"
+            entry-log INFO "Executing script [${ENTRY_INIT_COUNT}/${ENTRY_INIT_TOTAL}]: ${ENTRY_INIT_FILE}"
             source "${ENTRY_INIT_FILE}"
         done
 
         popd > /dev/null
     else
-        log ERROR "ENTRY_INIT_DIR not found: ${ENTRY_INIT_DIR}"
+        entry-log ERROR "ENTRY_INIT_DIR not found: ${ENTRY_INIT_DIR}"
         exit 1
     fi
 
-    log SUCCESS "$0: execution of all init scripts (${ENTRY_INIT_COUNT}): FINISHED SUCCESSFULLY"
+    entry-log SUCCESS "$0: execution of all init scripts (${ENTRY_INIT_COUNT}): FINISHED SUCCESSFULLY"
 }
 
 _main

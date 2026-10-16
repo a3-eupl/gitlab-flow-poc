@@ -6,10 +6,10 @@
 # exports it as an environment variable named DIR_<DIRNAME_UPPERCASE_NO_DOTS>,
 # and creates a file dir-<dirname_lowercase_no_dots> with the export line.
 
-_dir2env() {
+dir_push() {
   local dirpath="$1"
 
-  assert DIR "$dirpath"
+  air-assert DIR "$dirpath"
 
   local dirname
   dirname=$(basename "$dirpath")
@@ -22,7 +22,7 @@ _dir2env() {
   filename="${filename,,}.env"
 
   tar -cJf .env2dir.tar.xz -C "$(dirname "$dirpath")" "$dirname" || {
-    log ERROR "Failed to create archive from directory '$dirpath'."
+    air-log ERROR "Failed to create archive from directory '$dirpath'."
     return 2
   }
 
@@ -32,16 +32,16 @@ _dir2env() {
   rm -f .env2dir.tar.xz
 
   export "$varname=$encoded"
-  log INFO "Exported variable: $varname"
+  air-log INFO "Exported variable: $varname"
 
   # Create the env file with export statement
   echo "$varname=$encoded" > "$filename"
-  log INFO "Created env file: $filename"
+  air-log INFO "Created env file: $filename"
 }
 
 if [[ $# -ne 1 ]]; then
-    log USAGE "$0 <DIRECTORY_PATH>"
+    air-log USAGE "$0 <DIRECTORY_PATH>"
     exit 64
 fi
 
-_dir2env "$1"
+dir_push "$1"

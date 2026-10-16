@@ -2,14 +2,14 @@
 
 set -e
 
-log INFO "GLAB_LOG: '${GLAB_LOG}'. Options: [INSPECT, DEBUG]"
+air-log INFO "AIR_LOG: '${AIR_LOG}'. Options: [INSPECT, DEBUG]"
 
-argument_config() {
+arg_config() {
     __INSPECT=false
     __DEBUG=false
     __NOPING=false
 
-    case "${GLAB_LOG}" in
+    case "${AIR_LOG}" in
         inspect|INSPECT)
             __INSPECT=true
             __DEBUG=true
@@ -24,7 +24,7 @@ argument_config() {
             --inspect) __INSPECT=true ;;
             --debug) __DEBUG=true ;;
             --noping) __NOPING=true ;;
-            *) log ERROR "Unknown parameter: $1"; exit 64 ;;
+            *) air-log ERROR "Unknown parameter: $1"; exit 64 ;;
         esac
         shift
     done
@@ -34,12 +34,12 @@ argument_config() {
     fi
 
     if [ "$__DEBUG" = true ]; then
-        source log level DEBUG
+        source air-log level DEBUG
     fi
 }
 
 setup_env() {
-    log INFO "${ENV_HOME}/${CI_ENVIRONMENT_NAME}.env"
+    air-log INFO "${ENV_HOME}/${CI_ENVIRONMENT_NAME}.env"
     if [ "$__DEBUG" = true ]; then
         ansi-cat "${ENV_HOME}/${CI_ENVIRONMENT_NAME}.env"
     fi
@@ -85,17 +85,17 @@ ams_ping() {
     if [ "$__NOPING" = false ]; then
         ams-ping
     else
-        log INFO "Skipping ams-ping due to --noping flag."
+        air-log INFO "Skipping ams-ping due to --noping flag."
     fi
 }
 
-ctx AHS_ORIGIN
-ctx AMS_ORIGIN
+ams-ctx AHS_ORIGIN
+ams-ctx AMS_ORIGIN
 
-argument_config "$@"
+arg_config "$@"
 setup_env
 
-ctx AMS_DEPLOY
+ams-ctx AMS_DEPLOY
 
 process_docker_compose
 portainer_deploy

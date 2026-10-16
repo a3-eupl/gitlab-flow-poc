@@ -2,7 +2,7 @@
 
 shopt -s nullglob
 
-ARCHIVE_DIR="/opt/postgres/.archive"
+ARCHIVE_DIR="${PSQL_ARCHIVE_DIR:-/var/lib/postgresql/data/.archive}"
 
 BOLD="\033[1m"
 GREEN='\033[0;32m'

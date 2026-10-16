@@ -2,14 +2,14 @@
 
 set -e
 
-log INFO "GLAB_LOG: '${GLAB_LOG}'. Options: [INSPECT, DEBUG]"
+air-log INFO "AIR_LOG: '${AIR_LOG}'. Options: [INSPECT, DEBUG]"
 
-argument_config() {
+arg_config() {
     __INSPECT=false
     __DEBUG=false
     __CRYPT=false
 
-    case "${GLAB_LOG}" in
+    case "${AIR_LOG}" in
         inspect|INSPECT)
             __INSPECT=true
             __DEBUG=true
@@ -24,7 +24,7 @@ argument_config() {
             --inspect) __INSPECT=true ;;
             --debug) __DEBUG=true ;;
             --crypt) __CRYPT=true ;;
-            *) log ERROR "Unknown parameter: $1"; exit 64 ;;
+            *) air-log ERROR "Unknown parameter: $1"; exit 64 ;;
         esac
         shift
     done
@@ -34,7 +34,7 @@ argument_config() {
     fi
 
     if [ "$__DEBUG" = true ]; then
-        source log level DEBUG
+        source air-log level DEBUG
     fi
 }
 
@@ -51,12 +51,12 @@ yml_to_env(){
         local ENV_FILE="src/${BASENAME}.env"
 
         if [[ -f "$ENV_FILE" ]]; then
-            log ERROR "Conversion error: '${YML_FILE}' cannot be converted because '${ENV_FILE}' already exists."
+            air-log ERROR "Conversion error: '${YML_FILE}' cannot be converted because '${ENV_FILE}' already exists."
             has_yaml_error=true
             continue
         fi
 
-        log INFO "Converting '${YML_FILE}' → '${ENV_FILE}'"
+        air-log INFO "Converting '${YML_FILE}' → '${ENV_FILE}'"
 
         for key in $(yq eval 'keys | .[]' "$YML_FILE"); do
             value=$(yq eval ".\"$key\"" "$YML_FILE" -o=json | jq -c .)
@@ -70,22 +70,22 @@ yml_to_env(){
     done
 
     if [[ "$has_yaml_error" == true ]]; then
-        log ERROR "Aborting due to YAML conversion errors."
+        air-log ERROR "Aborting due to YAML conversion errors."
         return 1
     fi
 }
 
-env_build() {
+build_kube_env() {
     local has_crlf_error=false
     for FILE in src/*.env; do
         if grep -q $'\r' "$FILE"; then
-            log ERROR "File '$FILE' contains CRLF line endings (Windows format). Please convert to LF."
+            air-log ERROR "File '$FILE' contains CRLF line endings (Windows format). Please convert to LF."
             has_crlf_error=true
         fi
     done
 
     if [[ "$has_crlf_error" == true ]]; then
-        log ERROR "Aborting due to CRLF issues."
+        air-log ERROR "Aborting due to CRLF issues."
         return 1
     fi
 
@@ -103,11 +103,11 @@ env_build() {
     )
 }
 
-env_build_crypt() {
-    assert ENV PDS_TOKEN
-    assert FILE /cache-volume/session-vault/ci-private.key-session-vault
+build_kube_env_crypt() {
+    air-assert ENV PDS_TOKEN
+    air-assert FILE /cache-volume/session-vault/ci-private.key-session-vault
     if ! unzip -p -P "${PDS_TOKEN}" /cache-volume/session-vault/ci-private.key-session-vault > /tmp/private.key; then
-        log ERROR "Environment variable 'pds-token' is invalid. Aborting pipeline execution."
+        air-log ERROR "Environment variable 'pds-token' is invalid. Aborting pipeline execution."
         exit 1
     fi
 
@@ -121,10 +121,10 @@ env_build_crypt() {
     #git-crypt status
     ansi-cat .gpg.env
     if grep -q "GITCRYPT" .gpg.env; then
-        log ERROR "Repo is still locked"
+        air-log ERROR "Repo is still locked"
         exit 2
     else
-        log INFO "Repo is successfully unlocked"
+        air-log INFO "Repo is successfully unlocked"
     fi
 
     mkdir -p .opt
@@ -134,16 +134,16 @@ env_build_crypt() {
     (cd src && for FILE in *.env; do echo "${ENV_HEAD}" > ../.opt/${FILE} && echo >> ../.opt/${FILE} && cat ${FILE} >> ../.opt/${FILE}; done)
 }
 
-ctx AHS_ORIGIN
-ctx AMS_ORIGIN
+ams-ctx AHS_ORIGIN
+ams-ctx AMS_ORIGIN
 
-argument_config "$@"
+arg_config "$@"
 
 yml_to_env
 if [ "$__CRYPT" = true ]; then
-    env_build_crypt
+    build_kube_env_crypt
 else
-    env_build
+    build_kube_env
 fi
 
-ctx ENV
+ams-ctx ENV

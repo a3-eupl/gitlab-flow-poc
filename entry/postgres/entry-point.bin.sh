@@ -12,5 +12,5 @@ su - postgres -c "/usr/lib/postgresql/14/bin/pg_resetwal -f /var/lib/postgresql/
 rm /var/lib/postgresql/data/postmaster.pid
 /usr/local/bin/docker-entrypoint.sh "postgres"
 
-log ERROR "FAILED !!!!!!!!!!!!!!!!"
+entry-log ERROR "FAILED !!!!!!!!!!!!!!!!"
 sleep 600

@@ -2,13 +2,13 @@
 
 set -e
 
-log INFO "GLAB_LOG: '${GLAB_LOG}'. Options: [INSPECT, DEBUG]"
+air-log INFO "AIR_LOG: '${AIR_LOG}'. Options: [INSPECT, DEBUG]"
 
-argument_config() {
+arg_config() {
     __INSPECT=false
     __DEBUG=false
 
-    case "${GLAB_LOG}" in
+    case "${AIR_LOG}" in
         inspect|INSPECT)
             __INSPECT=true
             __DEBUG=true
@@ -22,7 +22,7 @@ argument_config() {
         case $1 in
             --inspect) __INSPECT=true ;;
             --debug) __DEBUG=true ;;
-            *) log ERROR "Unknown parameter: $1"; exit 64 ;;
+            *) air-log ERROR "Unknown parameter: $1"; exit 64 ;;
         esac
         shift
     done
@@ -32,7 +32,7 @@ argument_config() {
     fi
 
     if [ "$__DEBUG" = true ]; then
-        source log level DEBUG
+        source air-log level DEBUG
     fi
 }
 repo_clone() {
@@ -58,12 +58,12 @@ repo_handler() {
     else
       A3_CLASS_DIAGRAM_PUML=cd-${AMS_REVISION%%-*}-${CI_COMMIT_REF_NAME#a3-}.puml
     fi
-    log VALUE A3_CLASS_DIAGRAM_PUML ${A3_CLASS_DIAGRAM_PUML}
+    air-log VALUE A3_CLASS_DIAGRAM_PUML ${A3_CLASS_DIAGRAM_PUML}
 
-    cp ${A3_CLASS_DIAGRAM} ${A3_PUML_DIR}/${A3_CLASS_DIAGRAM_PUML}
+    air-copy FILE ${A3_CLASS_DIAGRAM} ${A3_PUML_DIR}/${A3_CLASS_DIAGRAM_PUML}
 
     A3_RECORD="$(date +"%y%m%d-%H%M%S"): ${A3_CLASS_DIAGRAM_PUML}"
-    log VALUE A3_RECORD ${A3_RECORD}
+    air-log VALUE A3_RECORD ${A3_RECORD}
 
     if grep -q "${A3_CLASS_DIAGRAM_PUML}" ${A3_PUML_PROPERTIES}; then
       sed -i "s/.*${A3_CLASS_DIAGRAM_PUML}.*/${A3_RECORD}/" ${A3_PUML_PROPERTIES}
@@ -72,7 +72,7 @@ repo_handler() {
       echo "${A3_RECORD}" >> ${A3_PUML_PROPERTIES}
       A3_GIT_MESSAGE="new class-diagram"
     fi
-    log VALUE A3_GIT_MESSAGE ${A3_GIT_MESSAGE}
+    air-log VALUE A3_GIT_MESSAGE ${A3_GIT_MESSAGE}
 
     ansi-cat ${A3_PUML_PROPERTIES}
 }
@@ -84,15 +84,15 @@ repo_push() {
         git commit -m "${A3_GIT_MESSAGE} ${A3_CLASS_DIAGRAM_PUML}"
         git push origin main
     else
-        log WARN "No changes to commit"
+        air-log WARN "No changes to commit"
     fi
 }
 
 
-ctx AHS_ORIGIN
-ctx AMS_ORIGIN
+ams-ctx AHS_ORIGIN
+ams-ctx AMS_ORIGIN
 
-argument_config "$@"
+arg_config "$@"
 repo_clone
 repo_handler
 repo_push

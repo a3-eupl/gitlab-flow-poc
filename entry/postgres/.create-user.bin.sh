@@ -2,7 +2,7 @@
 USER="$1"
 PASSWORD="$2"
 
-log DEBUG Creating user if not exists: ${USER}
+entry-log DEBUG Creating user if not exists: ${USER}
 psql -U "${POSTGRES_USER}" --no-psqlrc --single-transaction --pset=pager=off \
   --tuples-only \
   --set=ON_ERROR_STOP=1 \

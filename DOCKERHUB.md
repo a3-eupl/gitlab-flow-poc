@@ -7,7 +7,7 @@ run_mc: docker run -it --rm a3services/${AMS_NAME}:${AMS_REVISION} mc
 run_bin: docker run -it --rm -v "$(pwd)/.bin:/opt/.bin" a3services/${AMS_NAME}:${AMS_REVISION} sh -c ".bin ; /bin/bash"
 ---
 
-# GitLab Flow for Docker Image Building & Deployment
+# air-pip3  Software Delivery Pipeline powered by A3
 
 ## 1. Purpose
 

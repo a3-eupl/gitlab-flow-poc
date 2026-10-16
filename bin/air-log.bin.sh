@@ -1,13 +1,13 @@
 #!/bin/bash
 
-: "${GLAB_LOG_LEVEL:=INFO}"
+: "${AIR_LOG_LEVEL:=INFO}"
 
 log_level() {
     local LEVEL="${1^^}"
     case "${LEVEL}" in
         HEAD|DEBUG|INFO|WARN|ERROR|SUCCESS)
-            export GLAB_LOG_LEVEL="${LEVEL}"
-            echo -e "\033[1;36m[INFO] Log level is set to: ${GLAB_LOG_LEVEL}\033[0m"
+            export AIR_LOG_LEVEL="${LEVEL}"
+            echo -e "\033[1;36m[INFO] Log level is set to: ${AIR_LOG_LEVEL}\033[0m"
             ;;
         *)
             echo "Invalid log level '${LEVEL}'. Please use: HEAD, DEBUG, INFO, WARN, ERROR or SUCCESS."
@@ -19,13 +19,13 @@ log_head() {
 }
 
 log_debug() {
-    if [ "${GLAB_LOG_LEVEL}" = "DEBUG" ]; then
+    if [ "${AIR_LOG_LEVEL}" = "DEBUG" ]; then
         echo -e "\033[1;34m[DEBUG] $@\033[0m"
     fi
 }
 
 log_info() {
-    if [ "${GLAB_LOG_LEVEL}" = "INFO" ] || [ "${GLAB_LOG_LEVEL}" = "DEBUG" ]; then
+    if [ "${AIR_LOG_LEVEL}" = "INFO" ] || [ "${AIR_LOG_LEVEL}" = "DEBUG" ]; then
         echo -e "\033[1;36m[INFO] $@\033[0m"
     fi
 }
@@ -58,9 +58,9 @@ log_value() {
     echo -e "\033[1;34m[VALUE] ${LOG_KEY} '\033[0m${LOG_VALUE}\033[1;34m'\033[0m"
 }
 
-GLAB_LOG_SCOPE="${1,,}"
+AIR_LOG_SCOPE="${1,,}"
 
-case "${GLAB_LOG_SCOPE}" in
+case "${AIR_LOG_SCOPE}" in
     level)
         shift
         log_level "$@"

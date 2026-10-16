@@ -1,19 +1,19 @@
 package main
 
 import (
+	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
-	"fmt"
-	"net"
-	"net/http"
 )
 
 var (
-    AMS_NAME     string
-    AMS_REVISION string
-    AMS_BUILD    string
+	AMS_NAME     string
+	AMS_REVISION string
+	AMS_BUILD    string
 )
 
 func check(e error) {
@@ -28,72 +28,83 @@ func main() {
 	fmt.Println("AMS_NAME: "     + os.Getenv("AMS_NAME"))
 	fmt.Println("AMS_REVISION: " + os.Getenv("AMS_REVISION"))
 	fmt.Println("AMS_DEPLOY: "   + os.Getenv("AMS_DEPLOY"))
-	fmt.Println("AMS_ENV: "      + os.Getenv("AMS_ENV"))
+	fmt.Println("AMS_SPACE: "    + os.Getenv("AMS_SPACE"))
 	fmt.Println("======================")
 	fmt.Println("AMS_HOME: "     + os.Getenv("AMS_HOME"))
 	fmt.Println("AMS_CMD: "      + os.Getenv("AMS_CMD"))
 	fmt.Println("AMS_PORT: "     + os.Getenv("AMS_PORT"))
 	fmt.Println("AMS_BIND: "     + os.Getenv("AMS_BIND"))
 	fmt.Println("======================")
+	
 	svg := retrieveSvg()
 	fmt.Println(svg)
 	fmt.Println("======================")
-	//saveSvg(svg)
-	//runCommand("/portainer")
-	//listenAndServe(svg, 5433)
-	//os.Getenv("AMS_HOME")
 
-	if(os.Getenv("AMS_HOME") != ""){
+	if os.Getenv("AMS_HOME") != "" {
 		fmt.Println("AMS_HOME")
 		saveSvg(svg, os.Getenv("AMS_HOME"))
 	}
-	if(os.Getenv("AMS_CMD") != ""){
+	if os.Getenv("AMS_CMD") != "" {
 		fmt.Println("AMS_CMD")
 		runCommand(os.Getenv("AMS_CMD"))
 	}
-	if(os.Getenv("AMS_PORT") != ""){
+	if os.Getenv("AMS_PORT") != "" {
 		fmt.Println("AMS_PORT")
 		listenAndServe(svg, os.Getenv("AMS_PORT"))
 	}
-	if(os.Getenv("AMS_BIND") != ""){
+	if os.Getenv("AMS_BIND") != "" {
 		fmt.Println("AMS_BIND")
 		listenAndCheck(svg, os.Getenv("AMS_BIND"))
 	}
 }
 
-func listenAndServe(svg string, port string){
+func listenAndServe(svg string, port string) {
 	fmt.Println("listenAndServe '/ams' " + port)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/ams", http.StatusMovedPermanently)
 	})
-	http.HandleFunc("/ams", func(w http.ResponseWriter, r *http.Request){
+	mux.HandleFunc("/ams", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "image/svg+xml")
-		fmt.Fprintf(w, svg)
+		fmt.Fprint(w, svg)
 	})
-	http.ListenAndServe(":" + port, nil)
-	return 
+	
+	err := http.ListenAndServe(":"+port, mux)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "CRITICAL SERVER ERROR (listenAndServe): %v\n", err)
+		os.Exit(1)
+	}
 }
 
-func listenAndCheck(svg string, ports string){
+func listenAndCheck(svg string, ports string) {
 	portsA := strings.Split(ports, ":")
 	listen := portsA[0]
 	check := portsA[1]
+	
 	fmt.Println("ListenAndCheck '/ams' listen: " + listen + ", check: " + check)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/ams", http.StatusMovedPermanently)
 	})
-	http.HandleFunc("/ams", func(w http.ResponseWriter, r *http.Request){
-		ln, err := net.Listen("tcp", ":" + check)	
+	
+	mux.HandleFunc("/ams", func(w http.ResponseWriter, r *http.Request) {
+		ln, err := net.Listen("tcp", ":"+check)
 		if err != nil {
 			w.Header().Add("Content-Type", "image/svg+xml")
-			fmt.Fprintf(w, svg)
+			fmt.Fprint(w, svg)
 		} else {
-			http.Error(w, "There is no service on the port " + check, 406)
+			http.Error(w, "There is no service on the port "+check, http.StatusNotAcceptable)
 			ln.Close()
 		}
 	})
-	http.ListenAndServe(":" + listen, nil)
-	return 
+	
+	err := http.ListenAndServe(":"+listen, mux)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "CRITICAL SERVER ERROR (listenAndCheck): %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func runCommand(command string) {
@@ -103,28 +114,26 @@ func runCommand(command string) {
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("ERROR!!! cmd.Run() failed with %s\n", err)
+		fmt.Fprintf(os.Stderr, "ERROR!!! cmd.Run() failed with %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Println("DONE " + command)
-	return
 }
 
-func saveSvg(svg string, home string) () {
+func saveSvg(svg string, home string) {
 	fmt.Println("Save svg")
 	d1 := []byte(svg)
-	err := os.WriteFile(home+"/"+"ams.svg", d1, 0644)
+	err := os.WriteFile(home+"/ams.svg", d1, 0644)
 	check(err)
-	return
 }
 
 func retrieveSvg() (svg string) {
 	svg = os.Getenv("AMS")
 
 	pat := regexp.MustCompile(`\${([^}]+)}`)
-	matches := pat.FindAllStringSubmatch(svg, -1) // matches is [][]string
+	matches := pat.FindAllStringSubmatch(svg, -1)
 
 	for _, match := range matches {
-		//fmt.Printf("key=%s, value=%s, env=%s\n", match[0], match[1], os.Getenv(match[1]))
 		replacer := strings.NewReplacer(match[0], os.Getenv(match[1]))
 		svg = replacer.Replace(svg)
 	}

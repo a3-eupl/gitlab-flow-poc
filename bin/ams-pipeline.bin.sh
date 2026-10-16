@@ -2,13 +2,13 @@
 
 set -e
 
-log INFO "GLAB_LOG: '${GLAB_LOG}'. Options: [INSPECT, DEBUG]"
+air-log INFO "AIR_LOG: '${AIR_LOG}'. Options: [INSPECT, DEBUG]"
 
-argument_config() {
+arg_config() {
     __INSPECT=false
     __DEBUG=false
 
-    case "${GLAB_LOG}" in
+    case "${AIR_LOG}" in
         inspect|INSPECT)
             __INSPECT=true
             __DEBUG=true
@@ -22,7 +22,7 @@ argument_config() {
         case $1 in
             --inspect) __INSPECT=true ;;
             --debug) __DEBUG=true ;;
-            *) log ERROR "Unknown parameter: $1"; exit 64 ;;
+            *) air-log ERROR "Unknown parameter: $1"; exit 64 ;;
         esac
         shift
     done
@@ -32,21 +32,21 @@ argument_config() {
     fi
 
     if [ "$__DEBUG" = true ]; then
-        source log level DEBUG
+        source air-log level DEBUG
     fi
 }
 
 check_pipeline_source() {
   if [ "${CI_PIPELINE_SOURCE}" != "pipeline" ]; then
-    log INFO "Skipping further execution. CI_PIPELINE_SOURCE is '${CI_PIPELINE_SOURCE}'."
-    log INFO "This pipeline is designed to process pipelines with CI_PIPELINE_SOURCE: 'pipeline'."
+    air-log INFO "Skipping further execution. CI_PIPELINE_SOURCE is '${CI_PIPELINE_SOURCE}'."
+    air-log INFO "This pipeline is designed to process pipelines with CI_PIPELINE_SOURCE: 'pipeline'."
     exit 0
   fi
 }
 
-ctx AHS_ORIGIN
+ams-ctx AHS_ORIGIN
 
-argument_config "$@"
+arg_config "$@"
 check_pipeline_source
 
-ctx AMS_PIPELINE
+ams-ctx AMS_PIPELINE

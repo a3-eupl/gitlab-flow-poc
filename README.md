@@ -1,10 +1,12 @@
-# CI/CD Pipeline for AMS Project
+# air-pip3  Software Delivery Pipeline powered by A3
+
+AIR = Application Integration & Release
 
 This CI/CD pipeline is configured on GitLab and includes several stages for managing and publishing versions of the AMS project.
 
 ## Docker Image
 
-The pipeline uses the Docker image `a3services/hub-gitlab-flow:${AMS_REVISION}` as the base image for executing jobs.
+The pipeline uses the Docker image `a3services/air-pip3:${AMS_REVISION}` as the base image for executing jobs.
 
 ## Prerequisites
 

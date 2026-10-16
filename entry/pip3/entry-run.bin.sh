@@ -15,14 +15,15 @@ debug_info() {
 
 setup_bin(){
     sh bin/.bin.bin.sh
-    log INFO SUPEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    entry-log INFO SUPEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 }
 
 install_system_packages() {
   apk upgrade
   apk --no-cache add bash maven gcompat curl jq docker-cli tzdata git kubectl \
     envsubst yq highlight xz git-crypt gnupg unzip zip mc apache2-utils \
-    python3 autoconf automake libtool build-base nasm make gawk zlib-dev coreutils
+    python3 autoconf automake libtool build-base nasm make gawk zlib-dev coreutils \
+    discount
 }
 
 install_docker_buildx() {
@@ -82,12 +83,13 @@ main() {
     install_system_packages
  
     install_docker_buildx
-    install_trivy
-    install_helm
-    install_sentry
-    install_easy_node_manager
-    install_easy_java_manager
-    install_easy_maven_manager
+#    install_trivy
+#    install_helm
+#    install_sentry
+
+#    install_easy_node_manager
+#    install_easy_java_manager
+#    install_easy_maven_manager
 #    setup_users_and_groups
 
 }

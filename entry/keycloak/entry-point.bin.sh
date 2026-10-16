@@ -7,5 +7,5 @@ ams-service &
 entry-init "Keycloak" &
 /opt/keycloak/bin/kc.sh "start"
 
-log ERROR "FAILED !!!!!!!!!!!!!!!!"
+entry-log ERROR "FAILED !!!!!!!!!!!!!!!!"
 sleep 600

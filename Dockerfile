@@ -1,4 +1,4 @@
-FROM alpine:3.21.3
+FROM alpine:3.24.2
 
 ARG AMS AMS_NAME AMS_REVISION AMS_BUILD
 
@@ -11,20 +11,16 @@ ENV AMS=${AMS} \
     SHELL=/bin/bash \
     TERM=xterm \
     DOCKER_BUILDKIT=1\
-    GLAB_VERSION="/cache-volume/.glab.version"\
+    AIR_VERSION="/cache-volume/air/.version"\
+    CI_HOME="/cache-volume/air/ci"\
+    ROLLOUT_HOME="/cache-volume/air/rollout"\
     AUTH_HTPASSWD="/cache-volume/.auth.htpasswd"\
-    ROLLOUT_HOME=/cache-volume/rollout\
-    KUBECONFIG_HOME=/cache-volume/kubeconfig\
-    ENV_HOME=/cache-volume/env\
-    MVN_HOME=/cache-volume/mvn\
-    CI_HOME=/cache-volume/ci\
-    TRIVY_CACHE_DIR=/cache-volume/trivy\
-    GIT_DEPTH=1\
-    _JAVA_HOME=/usr/lib/jvm/default-jvm\
-    _MAVEN_HOME=/opt/maven/current\
-    _M2_HOME=/opt/maven/current\
-    _PATH=/opt/maven/current/bin:$PATH\
-    _PATH=/usr/lib/jvm/current/bin:$PATH
+    BIN_HOME="/cache-volume/bin"\
+    KUBECONFIG_HOME="/cache-volume/kube/config"\
+    ENV_HOME="/cache-volume/kube/env"\
+    MVN_HOME="/cache-volume/lib/mvn"\
+    TRIVY_CACHE_DIR="/cache-volume/lib/trivy"\
+    GIT_DEPTH=1
 
 WORKDIR /opt
 

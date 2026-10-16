@@ -12,5 +12,5 @@ entry-init "Minio" &
 #rm /var/lib/postgresql/data/postmaster.pid
 #/usr/local/bin/docker-entrypoint.sh "postgres"
 
-log ERROR "FAILED !!!!!!!!!!!!!!!!"
+entry-log ERROR "FAILED !!!!!!!!!!!!!!!!"
 sleep 600
