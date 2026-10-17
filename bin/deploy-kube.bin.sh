@@ -76,16 +76,20 @@ space_setup() {
 env_setup_kube() {
     air-log INFO ENV-KUBE: setup
     if [ "$AMS_PARTITION" != "downstream" ]; then
-        local CONFIG_ENV_FILE="${ENV_HOME}/${AMS_SPACE}.env"
-
-        if [[ ! -f "${CONFIG_ENV_FILE}" ]]; then
-            CONFIG_ENV_FILE="${ENV_HOME}/${AMS_SPACE}/${AMS_NAME}.env"
-        fi
+        local CONFIG_ENV_FILE_A="${ENV_HOME}/${AMS_SPACE}.env"
+        local CONFIG_ENV_FILE_B="${ENV_HOME}/${AMS_SPACE}/${AMS_NAME}.env"
         
-        if [[ ! -f "${CONFIG_ENV_FILE}" ]]; then
-            air-log ERROR "Configuration file \"${CONFIG_ENV_FILE}\" not found. The space \"${AMS_SPACE}\" is not properly configured."
-            exit 2
+        local CONFIG_ENV_FILE=""
+
+        if [[ -f "${CONFIG_ENV_FILE_A}" ]]; then
+            CONFIG_ENV_FILE="${CONFIG_ENV_FILE_A}"
+        elif [[ -f "${CONFIG_ENV_FILE_B}" ]]; then
+            CONFIG_ENV_FILE="${CONFIG_ENV_FILE_B}"
+        else
+            air-log WARN "Configuration file not found (checked: \"${CONFIG_ENV_FILE_A}\" and \"${CONFIG_ENV_FILE_B}\"). Configuration is optional."
+            return
         fi
+
         air-log INFO ENV: ${CONFIG_ENV_FILE}
         if [ "$__DEBUG" = true ]; then
             ansi-cat ${CONFIG_ENV_FILE}
@@ -105,27 +109,25 @@ env_setup_kube() {
         
         ams-ctx KUBE
     fi
-
-
 }
 
 env_setup() {
     air-log INFO ENV: setup
     if [ "$AMS_PARTITION" != "downstream" ]; then
-        #if [[ -z ${AMS_SEGMENT} || ${AMS_SEGMENT} == no* ]]; then
-        #    log ERROR "The value \"${AMS_SEGMENT}\" of AMS_SEGMENT is invalid. Please provide a valid segment."
-        #    exit 1
-        #fi
-        local CONFIG_ENV_FILE="${ENV_HOME}/${AMS_SPACE}.env"
-
-        if [[ ! -f "${CONFIG_ENV_FILE}" ]]; then
-            CONFIG_ENV_FILE="${ENV_HOME}/${AMS_SPACE}/${AMS_NAME}.env"
-        fi
+        local CONFIG_ENV_FILE_A="${ENV_HOME}/${AMS_SPACE}.env"
+        local CONFIG_ENV_FILE_B="${ENV_HOME}/${AMS_SPACE}/${AMS_NAME}.env"
         
-        if [[ ! -f "${CONFIG_ENV_FILE}" ]]; then
-            air-log ERROR "Configuration file \"${CONFIG_ENV_FILE}\" not found. The space \"${AMS_SPACE}\" is not properly configured."
+        local CONFIG_ENV_FILE=""
+
+        if [[ -f "${CONFIG_ENV_FILE_A}" ]]; then
+            CONFIG_ENV_FILE="${CONFIG_ENV_FILE_A}"
+        elif [[ -f "${CONFIG_ENV_FILE_B}" ]]; then
+            CONFIG_ENV_FILE="${CONFIG_ENV_FILE_B}"
+        else
+            air-log ERROR "Configuration file not found (checked: \"${CONFIG_ENV_FILE_A}\" and \"${CONFIG_ENV_FILE_B}\"). Configuration is required."
             exit 2
         fi
+
         air-log INFO ENV: ${CONFIG_ENV_FILE}
         if [ "$__DEBUG" = true ]; then
             ansi-cat ${CONFIG_ENV_FILE}
