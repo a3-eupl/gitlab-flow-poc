@@ -167,6 +167,9 @@ env_files() {
 
     ams_rollout
 
+    source ami-dir-push .kube
+    source ami-dir-push .docker
+
     cat << EOF > "${AMS_ORIGIN_ENV}"
 AMS=${AMS}
 AMS_NAME=${AMS_NAME}
@@ -182,7 +185,11 @@ AMS_TRIGGER=${AMS_TRIGGER}
 AMS_RESOURCE=${AMS_RESOURCE}
 AMS_PROJECT=${AMS_PROJECT}
 AMS_REGISTRY=${AMS_REGISTRY}
+AMI_DIR_KUBE=${AMI_DIR_KUBE}
+AMI_DIR_DOCKER=${AMI_DIR_DOCKER}
 EOF
+    
+    printf 'ENV_SIZE=%s\n' "$(wc -c < "${AMS_ORIGIN_ENV}")"
 
     air-log DEBUG "Contents of the '${AMS_ORIGIN_ENV}' file:"
     air-log DEBUG "$(cat ./${AMS_ORIGIN_ENV})"
@@ -219,6 +226,7 @@ pipeline_name() {
         --header "Content-Type: application/json" \
         --data "{\"name\":\"$PIPELINE_NAME\"}" \
         "$CI_API_V4_URL/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/metadata"
+      printf '\n'
     else
       air-log WARN "GL_API_TOKEN is not set. Skipping the pipeline name update."
     fi

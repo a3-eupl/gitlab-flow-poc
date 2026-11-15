@@ -3,18 +3,36 @@
 # dir2env <DIRECTORY>
 # Packs the specified DIRECTORY into a tar.xz archive,
 # encodes it to base64 url-safe string (no padding, single line),
-# exports it as an environment variable named DIR_<DIRNAME_UPPERCASE_NO_DOTS>,
+# exports it as an environment variable named AMI_DIR_<DIRNAME_UPPERCASE_NO_DOTS>,
 # and creates a file dir-<dirname_lowercase_no_dots> with the export line.
+
+dir_create_placeholder() {
+  local dirpath="$1"
+
+  if [[ ! -d "$dirpath" ]]; then
+    mkdir -p "$dirpath" || {
+      air-log ERROR "Failed to create directory '$dirpath'."
+      return 1
+    }
+
+    cat <<EOF > "$dirpath/.ami-dir-placeholder"
+This directory was created automatically by ami-dir-push because it did not exist.
+It contains no original data.
+EOF
+
+    air-log WARN "ami-dir-push created placeholder directory: $dirpath"
+  fi
+}
 
 dir_push() {
   local dirpath="$1"
 
-  air-assert DIR "$dirpath"
+  dir_create_placeholder "$dirpath" || return $?
 
   local dirname
   dirname=$(basename "$dirpath")
   # Remove dots and convert to uppercase for variable name
-  local varname="DIR_${dirname//./}"
+  local varname="AMI_DIR_${dirname//./}"
   varname=${varname^^}
 
   # For filename: lowercase and remove dots
@@ -32,11 +50,7 @@ dir_push() {
   rm -f .env2dir.tar.xz
 
   export "$varname=$encoded"
-  air-log INFO "Exported variable: $varname"
-
-  # Create the env file with export statement
-  echo "$varname=$encoded" > "$filename"
-  air-log INFO "Created env file: $filename"
+  air-log INFO "ami-dir-push exported variable: $varname (directory: $dirpath)"
 }
 
 if [[ $# -ne 1 ]]; then

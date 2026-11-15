@@ -10,7 +10,13 @@ dir_pull() {
 
   local encoded="${!varname}"
   local padding=$(( (4 - ${#encoded} % 4) % 4 ))
-  local pad=$(printf '=%.0s' $(seq 1 $padding))
+  local pad=""
+  
+  if [ $padding -gt 0 ]; then
+    pad=$(printf '=%.0s' $(eval echo {1..$padding}))
+  fi
+
+  air-log DEBUG "Padding length is ${padding} (${pad})"
 
   echo "${encoded}${pad}" | tr '_-' '/+' | base64 -d > .env2dir.tar.xz || {
     air-log ERROR "Failed to decode base64 data from variable '$varname'."
@@ -24,6 +30,8 @@ dir_pull() {
   }
 
   rm -f .env2dir.tar.xz
+
+  air-log INFO "ami-dir-pull restored directory: $dirname (variable: $varname)"
 }
 
 if [[ $# -ne 1 ]]; then

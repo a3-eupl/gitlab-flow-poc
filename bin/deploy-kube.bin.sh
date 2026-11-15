@@ -446,6 +446,7 @@ ams-ctx AHS_ORIGIN
 ams-ctx AMS_ORIGIN
 
 arg_config "$@"
+ami-dir-pull AMI_DIR_KUBE
 
 space_setup
 
